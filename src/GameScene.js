@@ -2,9 +2,10 @@ var GameLayer = cc.Layer.extend({
     background : null,
     winSize : null,
     slectedArray : [],  //选中气球的数组
+    blastArray : [],    //保存等待爆炸的气球
     balloonSpr : [],    //气球矩阵数组，存储气球精灵
     balloonPos : [],    //气球位置矩阵数组
-    spriteBatchNode : null,
+    balloonBatchNode : null,
     pauseButton : null,
     clockPanel : null,
     scorePanel : null,
@@ -25,7 +26,12 @@ var GameLayer = cc.Layer.extend({
         this.background = new Cloud();
         this.background.init(false);
         this.addChild(this.background);
+        this.balloonBatchNode = cc.SpriteBatchNode.create(res.balloons_png, MATRIX_COL_MAX * MATRIX_ROW_MAX);
+        this.addChild(this.balloonBatchNode);
         this.initWidgetUI();
+        this.balloonPos = this.createArray(MATRIX_ROW_MAX, MATRIX_COL_MAX, null);
+        this.balloonSpr = this.createArray(MATRIX_ROW_MAX, MATRIX_COL_MAX, null);
+        this.initMatrix();
     },
 
     /**
@@ -63,9 +69,9 @@ var GameLayer = cc.Layer.extend({
     createArray : function(row, col, value) {
         var arr = [];
         for(var i = 0; i < row; i++) {
-            row[i] = [];
+            arr[i] = [];
             for(var j = 0; j < col; j++) {
-                row[i][j] = value;
+                arr[i][j] = value;
             }
         }
         return arr;
@@ -91,6 +97,8 @@ var GameLayer = cc.Layer.extend({
                 this.addOnePattern(row, col);
             }
         }
+
+        this.balloonFallTime = 0.4;
     },
 
     /**
@@ -124,15 +132,15 @@ var GameLayer = cc.Layer.extend({
         };
         this.balloonSpr[row][col] = new BalloonSprite();
         this.balloonSpr[row][col].init(attr);
+        this.balloonSpr[row][col]._gameLayer = this;
         this.balloonSpr[row][col].rowIndex = row;
         this.balloonSpr[row][col].colIndex = col;
         this.balloonSpr[row][col].setPosition(this.balloonPos[row][col].x, this.balloonPos[row][col].y - this.winSize.height);
         if(this.isInitial) {
-            this.balloonFallTime = this.balloonFallTime + 0.01;
-        } else {
-            this.balloonFallTime = 0.4;
+            this.balloonFallTime = this.balloonFallTime + 0.02;
         }
-        this.balloonSpr[row][col].moveTo(this.balloonFallTime, this.balloonPos[row][col]);
+        this.balloonSpr[row][col].runAction(cc.moveTo(this.balloonFallTime, this.balloonPos[row][col]));
+        this.balloonBatchNode.addChild(this.balloonSpr[row][col]);
     },
 
     /**

@@ -4,9 +4,12 @@ var BalloonSprite = cc.Sprite.extend({
     rowIndex : 0,
     colIndex : 0,
     idle : true,
+    index : 0,  //
+    isReady : false,  //是否准备爆炸状态
     animation : null,
     winWidth : null,
     winHeight : null,
+    _gameLayer : null,
 
     ctor : function() {
         this._super();
@@ -15,28 +18,36 @@ var BalloonSprite = cc.Sprite.extend({
     },
 
     init : function(attr) {
-        this.initWithSpriteFrameName(attr.color + "_balloon_00.png");
+        if(attr.type == 0) {
+            this.initWithSpriteFrameName(attr.color + "_balloon_00.png");
+            this.type = attr.type;
+            this.b_color = attr.color;
+            this.showFaceAnimation();
+        }else {
+            this.initWithSpriteFrameName("bomb_" + attr.type + ".png");
+        }
         this.idle = !attr.inGame;
-        this.b_color = attr.color;
-        this.showFaceAnimation();
         if(this.idle) {
             this.setRandomPosition();
             this.schedule(this.floatMove);
-        } else {
-
         }
     },
 
     showFaceAnimation : function() {
         this.animation = new cc.Animation();
-        var i = 0;
+        var i;
         var len = gameData.balloon_frame_length;
-        for (; i < len; i++) {
-            this.animation.addSpriteFrame(cc.spriteFrameCache.getSpriteFrame(this.b_color + "_balloon_" + ("00" + i).slice(-2) + ".png"));
+        for (i = 0; i < len; i++) {
+           this.animation.addSpriteFrame(cc.spriteFrameCache.getSpriteFrame(this.b_color + "_balloon_" + ("00" + i).slice(-2) + ".png"));
         }
-        this.animation.setDelayPerUnit(0.08);
+        var interval = Math.random() * 0.03 + 0.06;
+        this.animation.setDelayPerUnit(interval);
         var action = cc.animate(this.animation).repeatForever();
         this.runAction(action);
+    },
+
+    showInflatedAnimation : function() {
+
     },
 
     setRandomPosition : function() {
