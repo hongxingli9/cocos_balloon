@@ -30,11 +30,8 @@ var gameData = {
     hint_panels_length : 5,  //提示板张数
     flame_rate : 0.016
 }
-
-//行列数
-var MATRIX_ROW_MAX = 7;
-var MATRIX_COL_MAX = 6;
-
+var MATRIX_ROW_MAX = 7; //行数
+var MATRIX_COL_MAX = 6; //列数
 var bNomalTypeMax = 6; //普通气球类型总数
 var bBombAmbientProb = 1; //大炸弹几率
 var bBombHorizonProb = 2; //水平方向炸弹几率
@@ -42,11 +39,9 @@ var bBombVerticalProb = 2; //垂直方向炸弹几率
 var bBombTimeProb = 2; //加时炸弹几率
 var bBombRainbowProb = 2; //彩虹炸弹几率
 var bBombScoreProb = 2; //双倍加分炸弹几率
-
 var balloonWidth = 64; //气球精灵的宽度为64px
 var balloonHeight = 86; //气球精灵的高度为86px
 var offsetTop = 66;
-
 var balloonTypes = {
     "Normal" : 0,
     "ambientBomb" : 1,
@@ -55,6 +50,7 @@ var balloonTypes = {
     "timeBomb" : 4,
     "rainbowBomb" : 5,
     "scoreBomb" : 6
-}
-
+};
 var balloonColorArray = ["red","green","blue","orange","yellow","purple"];
+var TOUCH_BALLOON = "TOUCH_BALLOON"; //自定义事件标示
+var balloonClip = cc.rect(13, 30, 38, 40); //触摸精灵时所在的有效范围

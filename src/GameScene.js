@@ -1,16 +1,20 @@
 var GameLayer = cc.Layer.extend({
     background : null,
     winSize : null,
-    slectedArray : [],  //选中气球的数组
+    selectedArray : [],  //选中气球的数组
     blastArray : [],    //保存等待爆炸的气球
     balloonSpr : [],    //气球矩阵数组，存储气球精灵
     balloonPos : [],    //气球位置矩阵数组
+    ColorArray : [],  //保存滑动轨迹中选择不同的颜色
+    currentColor : null,  //当前可选择的颜色
+    lastOne : null,        //最近经过的气球
     balloonBatchNode : null,
     pauseButton : null,
     clockPanel : null,
     scorePanel : null,
     soundButton : null,
     controlPanel : null,
+    listener : null,
     isInitial : true,
     balloonFallTime : 0.4,
     score : 0,
@@ -32,6 +36,7 @@ var GameLayer = cc.Layer.extend({
         this.balloonPos = this.createArray(MATRIX_ROW_MAX, MATRIX_COL_MAX, null);
         this.balloonSpr = this.createArray(MATRIX_ROW_MAX, MATRIX_COL_MAX, null);
         this.initMatrix();
+        this.initEventListener();
     },
 
     /**
@@ -144,16 +149,55 @@ var GameLayer = cc.Layer.extend({
     },
 
     /**
-     * 创建时间和分数的数字精灵
-     */
-    buildNumber : function() {
-
-    },
-
-    /**
      * 初始化事件监听
      */
     initEventListener : function() {
+        var _gameLayer = this;
+        this.listener = cc.EventListener.create({
+            event : cc.EventListener.CUSTOM,
+            eventName : TOUCH_BALLOON,
+            callback : function(event) {
+                var target = event.getUserData();
+                _gameLayer.checkColorAndPosition(target);
+            }
+        });
+        cc.eventManager.addListener(this.listener, 1);
+    },
+
+    /*
+     * 检查是否颜色与前一个相同，且为前一个四周相邻的气球
+     */
+    checkColorAndPosition : function(target) {
+        //还要检查target是否已在selectedArray中了
+        if(target.isReady) {
+            //target已经在selectedArray中，则数组中target位置后面的气球被剔除出去
+        }
+        var xAxis = [-1, 0, 1], //x轴方向增量
+            yAxis = [-1, 0, 1]; //y轴方向增量
+        for(var i = 0, xlen = xAxis.length; i < xlen; i++) {
+            for(var j = 0, ylen = yAxis.length; j < ylen; j++) {
+                if(i == 0 && j ==0) {
+                    continue;
+                } else if((target.rowIndex == this.lastOne.rowIndex + j) && (target.colIndex == this.lastOne.colIndex + i) && target.color == this.currentColor){
+                    return true;
+                }
+                return false;
+            }
+        }
+    },
+
+    /*
+     * 添加气球进selectedArray
+     */
+    addBalloons : function(balloon) {
+        this.selectedArray.push(balloon);
+        this.lastOne = balloon;
+    },
+
+    /**
+     * 创建时间和分数的数字精灵
+     */
+    buildNumber : function() {
 
     },
 
