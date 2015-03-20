@@ -9,6 +9,7 @@ var GameLayer = cc.Layer.extend({
     currentColor : null,  //当前可选择的颜色
     lastOne : null,        //最近经过的气球
     balloonBatchNode : null,
+    isFirstTap : true,       //是否第一次触摸
     pauseButton : null,
     clockPanel : null,
     scorePanel : null,
@@ -16,7 +17,7 @@ var GameLayer = cc.Layer.extend({
     controlPanel : null,
     listener : null,
     isInitial : true,
-    balloonFallTime : 0.4,
+    balloonFallTime : 0.3,
     score : 0,
     time : 60,
 
@@ -112,7 +113,7 @@ var GameLayer = cc.Layer.extend({
     addOnePattern : function(row, col) {
         var temp = 0 | (Math.random() * 100);
         var prob = temp % 100;
-        var type = balloonTypes.Normal;
+        var type = balloonTypes.normal;
         if(bBombAmbientProb !=0 && prob < bBombAmbientProb) {
             type = balloonTypes.ambientBomb;
         } else if(bBombHorizonProb != 0 && prob < bBombAmbientProb + bBombHorizonProb) {
@@ -153,37 +154,115 @@ var GameLayer = cc.Layer.extend({
      */
     initEventListener : function() {
         var _gameLayer = this;
+
         this.listener = cc.EventListener.create({
-            event : cc.EventListener.CUSTOM,
-            eventName : TOUCH_BALLOON,
-            callback : function(event) {
-                var target = event.getUserData();
-                _gameLayer.checkColorAndPosition(target);
+            event : cc.EventListener.TOUCH_ONE_BY_ONE,
+            swallowTouches : true,
+            onTouchBegan: function(touch, event) {
+                var target = event.getCurrentTarget();
+                var balloon = null;
+                var coordinate = _gameLayer.getBalloonCoordinate(target, touch);
+                coordinate && (balloon = _gameLayer.balloonSpr[coordinate.x][coordinate.y]);
+                if(balloon && balloon.type == 0 && !balloon.isReady) {
+                    _gameLayer.addBalloons(balloon);
+                    balloon.showInflatedAnimation();
+                    balloon.index = 0;
+                     return true;
+                } else {
+                     return false;
+                }
+            },
+
+            onTouchMoved : function(touch, event) {
+                var isMoving = false;
+                var target = event.getCurrentTarget();
+                var balloon = null;
+                var coordinate = _gameLayer.getBalloonCoordinate(target, touch);
+                coordinate && (balloon = _gameLayer.balloonSpr[coordinate.x][coordinate.y]);
+                balloon && (isMoving = true);
+                if(isMoving && _gameLayer.isCoincided(balloon)) {
+                     _gameLayer.addBalloons(balloon);
+                     balloon.showInflatedAnimation();
+                     balloon.index = _gameLayer.selectedArray.length;
+                     return true;
+                }
+                return false;
+            },
+
+            onTouchEnded : function(touch, event) {
+                
             }
         });
-        cc.eventManager.addListener(this.listener, 1);
+        cc.eventManager.addListener(this.listener, this.balloonBatchNode);
+    },
+
+    /*
+     * 检查气球跟触摸点是否在有效范围
+     * 如果在范围内返回触摸选择到的气球在矩阵中的坐标
+     */
+    getBalloonCoordinate : function(target, touch) {
+        var locationInNode = target.convertToNodeSpace(touch.getLocation());
+        for(var i = 0; i < MATRIX_ROW_MAX; i++) {
+            for(var j = 0; j < MATRIX_COL_MAX; j++) {
+                if(i == target.rowIndex && j == target.colIndex && this.balloonSpr[i][j].isReady) {
+                    continue;
+                } else {
+                    var x_Dist = this.balloonSpr[i][j].x - locationInNode.x;
+                    var y_Dist = this.balloonSpr[i][j].y - locationInNode.y;
+                    var sq_Dist = x_Dist * x_Dist + y_Dist * y_Dist;
+                    if(sq_Dist < effectiveRange) {
+                        return {
+                            x : i,
+                            y : j
+                        };
+                    } else if(i == MATRIX_ROW_MAX - 1 && j == MATRIX_COL_MAX) {
+                        return false;
+                    }
+                }
+            }
+        }
     },
 
     /*
      * 检查是否颜色与前一个相同，且为前一个四周相邻的气球
      */
-    checkColorAndPosition : function(target) {
+    isCoincided : function(target) {
         //还要检查target是否已在selectedArray中了
         if(target.isReady) {
             //target已经在selectedArray中，则数组中target位置后面的气球被剔除出去
+            return false;
         }
-        var xAxis = [-1, 0, 1], //x轴方向增量
-            yAxis = [-1, 0, 1]; //y轴方向增量
-        for(var i = 0, xlen = xAxis.length; i < xlen; i++) {
-            for(var j = 0, ylen = yAxis.length; j < ylen; j++) {
-                if(i == 0 && j ==0) {
-                    continue;
-                } else if((target.rowIndex == this.lastOne.rowIndex + j) && (target.colIndex == this.lastOne.colIndex + i) && target.color == this.currentColor){
-                    return true;
-                }
-                return false;
-            }
+
+        //相邻且颜色符合选中的要求
+        if( this.isAdjacent(target, this.lastOne)  && this.isPeaceColor(target, this.currentColor)) {
+            return true;
         }
+
+        return false;
+    },
+
+    /*
+     * 判断目标气球是否在当前气球的相邻四周位置
+     */
+    isAdjacent : function(target, lastOne) {
+        //对角线方向上
+        if(1 == Math.abs(target.rowIndex - this.lastOne.rowIndex) && 1 == Math.abs(target.colIndex - this.lastOne.colIndex )) {
+            return true;
+        } else if((0 == Math.abs(target.rowIndex - this.lastOne.rowIndex) && 1 == Math.abs(target.colIndex - this.lastOne.colIndex )) || (1 == Math.abs(target.rowIndex - this.lastOne.rowIndex) && 0 == Math.abs(target.colIndex - this.lastOne.colIndex ))) {
+            //水平方向上
+            return true;
+        }
+        return false;
+    },
+
+    /*
+     * 目标气球颜色是否符合
+     */
+    isPeaceColor : function(target, currentColor) {
+        if(target.type != 0) {
+            return true;
+        }
+        return (target.b_color == currentColor || currentColor == "rainbow");
     },
 
     /*
@@ -192,6 +271,15 @@ var GameLayer = cc.Layer.extend({
     addBalloons : function(balloon) {
         this.selectedArray.push(balloon);
         this.lastOne = balloon;
+        //普通类型
+        if(balloon.type == balloonTypes.normal) {
+            this.currentColor = balloon.b_color;
+        } else if(balloon.type == balloonTypes.rainbowBomb) { //彩虹类型
+            this.currentColor = "rainbow";
+        } else { //其他类型，不重设currentColor
+            return;
+        }
+
     },
 
     /**

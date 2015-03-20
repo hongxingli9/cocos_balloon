@@ -18,9 +18,9 @@ var BalloonSprite = cc.Sprite.extend({
     },
 
     init : function(attr) {
-        if(attr.type == 0) {
+        this.type = attr.type;
+        if(this.type == 0) {
             this.initWithSpriteFrameName(attr.color + "_balloon_00.png");
-            this.type = attr.type;
             this.b_color = attr.color;
             this.showFaceAnimation();
         }else {
@@ -31,7 +31,7 @@ var BalloonSprite = cc.Sprite.extend({
             this.setRandomPosition();
             this.schedule(this.floatMove);
         } else {
-            this.initTouchListener();
+           // this.initTouchListener();
         }
     },
 
@@ -51,6 +51,24 @@ var BalloonSprite = cc.Sprite.extend({
 
     showInflatedAnimation : function() {
         this.stopAllActions();
+        var animation = new cc.Animation(),
+            i,
+            len = gameData.inflated_frame_length;
+        if(this.type == 0) {
+            for(i = 0; i < len; i++) {
+                animation.addSpriteFrame(cc.spriteFrameCache.getSpriteFrame(this.b_color + "_balloon_inflated_" + ("00" + i).slice(-2) + ".png"));
+            }
+        } else {
+            for(i = 0; i < len; i++) {
+                animation.addSpriteFrame(cc.spriteFrameCache.getSpriteFrame("bomb_" + this.type + "_" + ("00" + i).slice(-2) + ".png"));
+            }
+        }
+        var interval = 0.06;
+        animation.setDelayPerUnit(interval);
+        var action = cc.animate(animation).repeatForever();
+        this.runAction(action);
+
+
     },
 
     /*
@@ -58,15 +76,16 @@ var BalloonSprite = cc.Sprite.extend({
      */
     initTouchListener : function() {
         var touchListener = cc.EventListener.create({
-            event : cc.EventListener.TOUCH_ONE_BY_ONE,
-            swallowTouches : true,
-            onTouchBegan : function(touch, event) {
+            event : cc.EventListener.TOUCH_ALL_AT_ONCE,
+            //swallowTouches : true,
+            //onTouchBegan : function(touch, event) {
+            //    var target = event.getCurrentTarget();
+            //    target.onBalloonTouchBegan(touch, event);
+            //
+            //},
+            onTouchesMoved : function(touch, event) {
                 var target = event.getCurrentTarget();
-                return target.onBalloonTouchBegan(touch, event);
-            },
-            onTouchMoved : function(touch, event) {
-                var target = event.getCurrentTarget();
-                return target.onBalloonTouchMoved(touch, event);
+                target.onBalloonTouchMoved(touch, event);
             },
             onTouchEnded : function(touch, event) {
 
@@ -78,31 +97,39 @@ var BalloonSprite = cc.Sprite.extend({
 
     onBalloonTouchBegan : function(touch, event) {
         //爆炸后补充气球时不能点击
-        if(supplying) {
+        //if(supplying) {
             //
-        }
+        //}
         var target = event.getCurrentTarget();
         var locationInNode = target.convertToNodeSpace(touch.getLocation());
         var rect = balloonClip;
         if(cc.rectContainsPoint(rect, locationInNode) && target.type == 0 && !target.isReady) {
+            //cc.log("touch began");
             this._gameLayer.addBalloons(target);
+            target.showInflatedAnimation();
             target.index = 0;
-            return true;
+           // return true;
         } else {
-            return false;
+           // return false;
         }
     },
 
     onBalloonTouchMoved : function(touch, event) {
-        var target = event.getCurrentTarget();
-        var locationInNode = target.convertToNodeSpace(touch.getLocation());
+        var target = event.getCurrentTarget(); cc.log(target);
+        //var locationInNode = target.convertToNodeSpace(touch.getLocation());
         //var s = target.getContentSize();
         var rect = balloonClip;
         if(cc.rectContainsPoint(rect, locationInNode)) {
+            if(this._gameLayer.isFirstTap) {
+                this._gameLayer.addBalloons(target);
+                target.showInflatedAnimation();
+                target.index = 0;
+                this._gameLayer.isFirstTap = false;
+            }
             var event = new cc.EventCustom(TOUCH_BALLOON);
             event.setUserData(this);
             cc.eventManager.dispatchEvent(event);
-            return true;
+           // return true;
         } else {
 
         }

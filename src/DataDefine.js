@@ -1,6 +1,7 @@
 var gameData = {
     menu : null, //游戏菜单
     balloon_frame_length : 20,   //气球帧长度
+    inflated_frame_length : 4,  //膨胀气球帧长度
     floatBalloons : [    //菜单界面漂浮的气球
         {   "type" : 0,
             "color" : "red",
@@ -43,7 +44,7 @@ var balloonWidth = 64; //气球精灵的宽度为64px
 var balloonHeight = 86; //气球精灵的高度为86px
 var offsetTop = 66;
 var balloonTypes = {
-    "Normal" : 0,
+    "normal" : 0,
     "ambientBomb" : 1,
     "horizonBomb" : 2,
     "verticalBomb" : 3,
@@ -54,3 +55,4 @@ var balloonTypes = {
 var balloonColorArray = ["red","green","blue","orange","yellow","purple"];
 var TOUCH_BALLOON = "TOUCH_BALLOON"; //自定义事件标示
 var balloonClip = cc.rect(13, 30, 38, 40); //触摸精灵时所在的有效范围
+var effectiveRange = 625; //触摸点与气球坐标有效范围
