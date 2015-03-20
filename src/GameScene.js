@@ -6,6 +6,7 @@ var GameLayer = cc.Layer.extend({
     balloonSpr : [],    //气球矩阵数组，存储气球精灵
     balloonPos : [],    //气球位置矩阵数组
     ColorArray : [],  //保存滑动轨迹中选择不同的颜色
+    bombMark : [],    //保存bomb的坐标和bomb的类型
     currentColor : null,  //当前可选择的颜色
     lastOne : null,        //最近经过的气球
     balloonBatchNode : null,
@@ -163,7 +164,7 @@ var GameLayer = cc.Layer.extend({
                 var balloon = null;
                 var coordinate = _gameLayer.getBalloonCoordinate(target, touch);
                 coordinate && (balloon = _gameLayer.balloonSpr[coordinate.x][coordinate.y]);
-                if(balloon && balloon.type == 0 && !balloon.isReady) {
+                if(balloon && balloon.type == balloonTypes.normal && !balloon.isReady) {
                     _gameLayer.addBalloons(balloon);
                     balloon.showInflatedAnimation();
                     balloon.index = 0;
@@ -183,14 +184,19 @@ var GameLayer = cc.Layer.extend({
                 if(isMoving && _gameLayer.isCoincided(balloon)) {
                      _gameLayer.addBalloons(balloon);
                      balloon.showInflatedAnimation();
-                     balloon.index = _gameLayer.selectedArray.length;
+                     balloon.index = _gameLayer.selectedArray.length - 1; //这步忽略了已addBalloons，length已经+1，所以这里要-1；
                      return true;
                 }
                 return false;
             },
 
-            onTouchEnded : function(touch, event) {
-                
+            onTouchEnded : function() {
+                if(_gameLayer.selectedArray.length < 3) {
+                    _gameLayer.abandonAndRecover();
+                } else {
+                    //做爆炸处理
+
+                }
             }
         });
         cc.eventManager.addListener(this.listener, this.balloonBatchNode);
@@ -228,8 +234,21 @@ var GameLayer = cc.Layer.extend({
      */
     isCoincided : function(target) {
         //还要检查target是否已在selectedArray中了
-        if(target.isReady) {
+        //cc.log(target && target.index);
+        if(target.isReady && target.index == this.lastOne.index) {
+            //touchMove的时候坐标点还在命中的范围内时target还是当前的气球
+            return false;
+        } else if(target.isReady && target.index < this.lastOne.index) {
             //target已经在selectedArray中，则数组中target位置后面的气球被剔除出去
+            var del_index = target.index + 1,  //开始删除的索引
+                len = this.selectedArray.length;
+            for(var i = del_index; i < len; i++) {
+                this.selectedArray[i].showFaceAnimation();
+                this.selectedArray[i].isReady = false;
+                this.selectedArray[i].index = -1;
+            }
+            this.selectedArray.splice(del_index, len - del_index);
+            this.lastOne = target;
             return false;
         }
 
@@ -269,6 +288,7 @@ var GameLayer = cc.Layer.extend({
      * 添加气球进selectedArray
      */
     addBalloons : function(balloon) {
+        balloon.isReady = true;
         this.selectedArray.push(balloon);
         this.lastOne = balloon;
         //普通类型
@@ -280,6 +300,60 @@ var GameLayer = cc.Layer.extend({
             return;
         }
 
+    },
+
+    /*
+     * 个数不足3个，恢复选中气球的状态
+     */
+    abandonAndRecover : function() {
+        for(var i = 0,len = this.selectedArray.length, balloons = this.selectedArray; i < len; i++) {
+            balloons[i].isReady = false;
+            balloons[i].index = -1;
+            balloons[i].showFaceAnimation();
+        }
+        this.currentColor = null;
+        this.lastOne = null;
+        this.selectedArray = [];
+    },
+
+    /*
+     * 爆炸处理
+     */
+    explodeBalloons : function() {
+        //会爆炸及会被波及的气球添加进blastArray数组中
+        for(var i = 0, len = this.selectedArray.length; i < len; i++) {
+            var balloon = this.selectedArray[i];
+            if( balloon.type == balloonTypes.ambientBomb || balloon.type == balloonTypes.horizonBomb || balloon.type == balloonTypes.verticalBomb) {
+                this.bombMark.push(balloon);
+            }
+            this.blastArray.push(balloon);
+        }
+        if(0 < this.bombMark.length) {
+            for(var i = 0; i < this.bombMark.length; i++) {
+                var bomb = this.bombMark[i];
+                //十字型炸弹
+                if(this.bombMark[i].type == balloonTypes.ambientBomb) {
+                    for(var j = 0; j < MATRIX_COL_MAX; j++) {
+                        var balloon = this.balloonSpr[bomb.rowIndex][j];
+                        !balloon.isReady && (this.blastArray.push(balloon), balloon.isReady = true);
+                    }
+                    for(var j = 0; j < MATRIX_ROW_MAX; j++) {
+                        var balloon = this.balloonSpr[j][bomb.colIndex];
+                        !balloon.isReady && (this.blastArray.push(balloon), balloon.isReady = true);
+                    }
+                } else if(this.bombMark[i].type == balloonTypes.horizonBomb) {  //水平方向型炸弹
+                    for(var j = 0; j < MATRIX_COL_MAX; j++) {
+                        var balloon = this.balloonSpr[bomb.rowIndex][j];
+                        !balloon.isReady && (this.blastArray.push(balloon), balloon.isReady = true);
+                    }
+                } else if(this.bombMark[i].type == balloonTypes.verticalBomb) {  //垂直方向型炸弹
+                    for(var j = 0; j < MATRIX_ROW_MAX; j++) {
+                        var balloon = this.balloonSpr[j][bomb.colIndex];
+                        !balloon.isReady && (this.blastArray.push(balloon), balloon.isReady = true);
+                    }
+                }
+            }
+        }
     },
 
     /**

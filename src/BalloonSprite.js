@@ -4,7 +4,7 @@ var BalloonSprite = cc.Sprite.extend({
     rowIndex : 0,
     colIndex : 0,
     idle : true,
-    index : 0,  // gameLayer中选中精灵数组的索引
+    index : -1,  // gameLayer中选中精灵数组的索引
     isReady : false,  //是否准备爆炸状态
     animation : null,
     winWidth : null,
@@ -19,7 +19,7 @@ var BalloonSprite = cc.Sprite.extend({
 
     init : function(attr) {
         this.type = attr.type;
-        if(this.type == 0) {
+        if(this.type == balloonTypes.normal) {
             this.initWithSpriteFrameName(attr.color + "_balloon_00.png");
             this.b_color = attr.color;
             this.showFaceAnimation();
@@ -30,13 +30,15 @@ var BalloonSprite = cc.Sprite.extend({
         if(this.idle) {
             this.setRandomPosition();
             this.schedule(this.floatMove);
-        } else {
-           // this.initTouchListener();
         }
     },
 
     showFaceAnimation : function() {
         this.stopAllActions();
+        if(this.type != balloonTypes.normal) {
+            this.initWithSpriteFrameName("bomb_" + this.type + ".png");
+            return;
+        }
         this.animation = new cc.Animation();
         var i;
         var len = gameData.balloon_frame_length;
@@ -67,76 +69,6 @@ var BalloonSprite = cc.Sprite.extend({
         animation.setDelayPerUnit(interval);
         var action = cc.animate(animation).repeatForever();
         this.runAction(action);
-
-
-    },
-
-    /*
-     * 初始化触摸事件监听
-     */
-    initTouchListener : function() {
-        var touchListener = cc.EventListener.create({
-            event : cc.EventListener.TOUCH_ALL_AT_ONCE,
-            //swallowTouches : true,
-            //onTouchBegan : function(touch, event) {
-            //    var target = event.getCurrentTarget();
-            //    target.onBalloonTouchBegan(touch, event);
-            //
-            //},
-            onTouchesMoved : function(touch, event) {
-                var target = event.getCurrentTarget();
-                target.onBalloonTouchMoved(touch, event);
-            },
-            onTouchEnded : function(touch, event) {
-
-            }
-        });
-
-        cc.eventManager.addListener(touchListener, this);
-    },
-
-    onBalloonTouchBegan : function(touch, event) {
-        //爆炸后补充气球时不能点击
-        //if(supplying) {
-            //
-        //}
-        var target = event.getCurrentTarget();
-        var locationInNode = target.convertToNodeSpace(touch.getLocation());
-        var rect = balloonClip;
-        if(cc.rectContainsPoint(rect, locationInNode) && target.type == 0 && !target.isReady) {
-            //cc.log("touch began");
-            this._gameLayer.addBalloons(target);
-            target.showInflatedAnimation();
-            target.index = 0;
-           // return true;
-        } else {
-           // return false;
-        }
-    },
-
-    onBalloonTouchMoved : function(touch, event) {
-        var target = event.getCurrentTarget(); cc.log(target);
-        //var locationInNode = target.convertToNodeSpace(touch.getLocation());
-        //var s = target.getContentSize();
-        var rect = balloonClip;
-        if(cc.rectContainsPoint(rect, locationInNode)) {
-            if(this._gameLayer.isFirstTap) {
-                this._gameLayer.addBalloons(target);
-                target.showInflatedAnimation();
-                target.index = 0;
-                this._gameLayer.isFirstTap = false;
-            }
-            var event = new cc.EventCustom(TOUCH_BALLOON);
-            event.setUserData(this);
-            cc.eventManager.dispatchEvent(event);
-           // return true;
-        } else {
-
-        }
-    },
-
-    onBalloonTouchEnded : function(touch, event) {
-
     },
 
     setRandomPosition : function() {
