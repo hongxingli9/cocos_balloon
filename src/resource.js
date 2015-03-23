@@ -8,7 +8,9 @@ var res = {
     balloons_png : "res/images/balloons.png",
     balloons_plist : "res/images/balloons.plist",
     widget_plist : "res/images/widget.plist",
-    widget_png : "res/images/widget.png"
+    widget_png : "res/images/widget.png",
+    texture_plist : "res/images/texture.plist",
+    texture_png : "res/images/texture.png"
 };
 
 var g_resources = [];

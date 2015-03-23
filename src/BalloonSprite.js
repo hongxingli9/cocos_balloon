@@ -71,6 +71,25 @@ var BalloonSprite = cc.Sprite.extend({
         this.runAction(action);
     },
 
+    /*
+     * 气球爆炸效果
+     */
+    showExplosionAnimation : function() {
+        var _self = this;
+        this.stopAllActions();
+        //this.visible = false;
+        var  animation = new cc.Animation();
+        for(var i = 0; i < gameData.blast_frame_length; i++) {
+            animation.addSpriteFrame(cc.spriteFrameCache.getSpriteFrame("blast_" + ("00" + i).slice(-2) + ".png"));
+        }
+        var interval = 0.08;
+        animation.setDelayPerUnit(interval);
+        var action = cc.sequence(cc.animate(animation), cc.callFunc(function() {
+            _self.visible = false;
+        }));
+        this.runAction(action);
+    },
+
     setRandomPosition : function() {
         this.x = Math.floor(Math.random() * this.winWidth);
         this.y = Math.floor(Math.random() * this.winHeight);

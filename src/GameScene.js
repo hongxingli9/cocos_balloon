@@ -165,7 +165,7 @@ var GameLayer = cc.Layer.extend({
                 var coordinate = _gameLayer.getBalloonCoordinate(target, touch);
                 coordinate && (balloon = _gameLayer.balloonSpr[coordinate.x][coordinate.y]);
                 if(balloon && balloon.type == balloonTypes.normal && !balloon.isReady) {
-                    _gameLayer.addBalloons(balloon);
+                    _gameLayer.selectBalloons(balloon);
                     balloon.showInflatedAnimation();
                     balloon.index = 0;
                      return true;
@@ -182,9 +182,9 @@ var GameLayer = cc.Layer.extend({
                 coordinate && (balloon = _gameLayer.balloonSpr[coordinate.x][coordinate.y]);
                 balloon && (isMoving = true);
                 if(isMoving && _gameLayer.isCoincided(balloon)) {
-                     _gameLayer.addBalloons(balloon);
+                     _gameLayer.selectBalloons(balloon);
                      balloon.showInflatedAnimation();
-                     balloon.index = _gameLayer.selectedArray.length - 1; //这步忽略了已addBalloons，length已经+1，所以这里要-1；
+                     balloon.index = _gameLayer.selectedArray.length - 1; //这步忽略了已selectBalloons，length已经+1，所以这里要-1；
                      return true;
                 }
                 return false;
@@ -195,7 +195,7 @@ var GameLayer = cc.Layer.extend({
                     _gameLayer.abandonAndRecover();
                 } else {
                     //做爆炸处理
-
+                    _gameLayer.explodeBalloons();
                 }
             }
         });
@@ -287,7 +287,7 @@ var GameLayer = cc.Layer.extend({
     /*
      * 添加气球进selectedArray
      */
-    addBalloons : function(balloon) {
+    selectBalloons : function(balloon) {
         balloon.isReady = true;
         this.selectedArray.push(balloon);
         this.lastOne = balloon;
@@ -320,6 +320,7 @@ var GameLayer = cc.Layer.extend({
      * 爆炸处理
      */
     explodeBalloons : function() {
+        var _self = this;
         //会爆炸及会被波及的气球添加进blastArray数组中
         for(var i = 0, len = this.selectedArray.length; i < len; i++) {
             var balloon = this.selectedArray[i];
@@ -354,6 +355,25 @@ var GameLayer = cc.Layer.extend({
                 }
             }
         }
+        //blastArray里的balloon产生爆炸动画
+        for(var i = 0,len = this.blastArray.length; i < len; i++) {
+            this.blastArray[i].showExplosionAnimation();
+        }
+        this.runAction(cc.sequence(cc.delayTime(1), cc.callFunc(function() {
+            _self.clearAndAddBalloons();
+        })));
+
+    },
+
+    /*
+     * 爆炸后清除工作
+     */
+    clearAndAddBalloons : function() {
+        for(var i = 0, len = this.selectedArray.length; i < len; i++) {
+            //this.balloonBatchNode.removeChild(this.selectedArray([i]));
+           // this.balloonSpr[this.selectedArray[i].rowIndex][this.selectedArray[i].colIndex] = null;
+        }
+
     },
 
     /**

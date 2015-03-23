@@ -2,6 +2,7 @@ var gameData = {
     menu : null, //游戏菜单
     balloon_frame_length : 20,   //气球帧长度
     inflated_frame_length : 4,  //膨胀气球帧长度
+    blast_frame_length : 11,    //爆炸帧长度
     floatBalloons : [    //菜单界面漂浮的气球
         {   "type" : 0,
             "color" : "red",
