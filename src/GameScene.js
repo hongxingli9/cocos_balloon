@@ -1,3 +1,5 @@
+var _gameLayer;
+
 var GameLayer = cc.Layer.extend({
     background : null,
     winSize : null,
@@ -24,7 +26,9 @@ var GameLayer = cc.Layer.extend({
 
     ctor : function() {
         this._super();
+        _gameLayer = this;
         this.init();
+
     },
 
     init : function() {
@@ -33,7 +37,11 @@ var GameLayer = cc.Layer.extend({
         this.background.init(false);
         this.addChild(this.background);
         this.balloonBatchNode = cc.SpriteBatchNode.create(res.balloons_png, MATRIX_COL_MAX * MATRIX_ROW_MAX);
+        this.explosionBatchNode = cc.SpriteBatchNode.create(res.texture_png);
         this.addChild(this.balloonBatchNode);
+        this.addChild(this.explosionBatchNode);
+        Explosion.preSet();
+       // Explosion.sharedExplosion();
         this.initWidgetUI();
         this.balloonPos = this.createArray(MATRIX_ROW_MAX, MATRIX_COL_MAX, null);
         this.balloonSpr = this.createArray(MATRIX_ROW_MAX, MATRIX_COL_MAX, null);
@@ -106,6 +114,7 @@ var GameLayer = cc.Layer.extend({
         }
 
         this.balloonFallTime = 0.4;
+        this.isInitial = false;
     },
 
     /**
@@ -154,8 +163,6 @@ var GameLayer = cc.Layer.extend({
      * 初始化事件监听
      */
     initEventListener : function() {
-        var _gameLayer = this;
-
         this.listener = cc.EventListener.create({
             event : cc.EventListener.TOUCH_ONE_BY_ONE,
             swallowTouches : true,
@@ -196,6 +203,7 @@ var GameLayer = cc.Layer.extend({
                 } else {
                     //做爆炸处理
                     _gameLayer.explodeBalloons();
+                    _gameLayer.runAction(cc.sequence(cc.delayTime(0.8), cc.callFunc(_gameLayer.clearAfrerExplosion, _gameLayer)));
                 }
             }
         });
@@ -355,25 +363,74 @@ var GameLayer = cc.Layer.extend({
                 }
             }
         }
+
         //blastArray里的balloon产生爆炸动画
         for(var i = 0,len = this.blastArray.length; i < len; i++) {
             this.blastArray[i].showExplosionAnimation();
         }
-        this.runAction(cc.sequence(cc.delayTime(1), cc.callFunc(function() {
-            _self.clearAndAddBalloons();
-        })));
+    },
 
+    /*
+     * clear after explosion
+     */
+    clearAfrerExplosion : function() {
+        for(var i = 0, len = this.blastArray.length, balloons = this.blastArray; i < len; i++) {
+            balloons[i].isReady = false;
+            balloons[i].index = -1;
+        }
+        this.currentColor = null;
+        this.lastOne = null;
+        this.selectedArray = [];
+
+        //清除节点
+        this.clearBalloons();
+
+        //补充
+        this.coverBlank();
+        for(var i = 0; i < MATRIX_ROW_MAX; i++) {
+            for(var j = 0; j < MATRIX_COL_MAX; j++) {
+                if(!this.balloonSpr[i][j]) {
+                    this.addOnePattern(i, j);
+                }
+            }
+        }
     },
 
     /*
      * 爆炸后清除工作
      */
-    clearAndAddBalloons : function() {
-        for(var i = 0, len = this.selectedArray.length; i < len; i++) {
-            //this.balloonBatchNode.removeChild(this.selectedArray([i]));
-           // this.balloonSpr[this.selectedArray[i].rowIndex][this.selectedArray[i].colIndex] = null;
+    clearBalloons : function() {
+        for(var i = 0, len = this.blastArray.length; i < len; i++) {
+            this.balloonBatchNode.removeChild(this.balloonSpr[this.blastArray[i].rowIndex][this.blastArray[i].colIndex], true);
+            this.balloonSpr[this.blastArray[i].rowIndex][this.blastArray[i].colIndex] = null;
         }
 
+    },
+
+    /*
+     * 空白处补充气球
+     */
+    coverBlank : function() {
+        var index;
+        for(var i = 0; i < MATRIX_ROW_MAX; i++) {
+            for(var j = 0; j < MATRIX_COL_MAX; j++) {
+                if(!this.balloonSpr[i][j] && i != MATRIX_ROW_MAX) {
+                    var _blank = i;
+                    index = i + 1;
+                    while(index < MATRIX_ROW_MAX) {
+                       if(this.balloonSpr[index][j]) {
+                           this.balloonSpr[index][j].runAction(cc.moveTo(this.balloonFallTime, this.balloonPos[_blank][j]));
+                           this.balloonSpr[_blank][j] = this.balloonSpr[index][j];
+                           this.balloonSpr[index][j] = null;
+                           _blank += 1;
+                           index = _blank + 1;
+                       } else {
+                           index ++;
+                       }
+                    }
+                }
+            }
+        }
     },
 
     /**
@@ -427,3 +484,7 @@ var GameScene = cc.Scene.extend({
        }
 
 });
+
+GameLayer.prototype.addExplosions = function(explosion) {
+    this.explosionBatchNode.addChild(explosion);
+}

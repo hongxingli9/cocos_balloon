@@ -75,19 +75,20 @@ var BalloonSprite = cc.Sprite.extend({
      * 气球爆炸效果
      */
     showExplosionAnimation : function() {
-        var _self = this;
         this.stopAllActions();
-        //this.visible = false;
-        var  animation = new cc.Animation();
-        for(var i = 0; i < gameData.blast_frame_length; i++) {
-            animation.addSpriteFrame(cc.spriteFrameCache.getSpriteFrame("blast_" + ("00" + i).slice(-2) + ".png"));
-        }
-        var interval = 0.08;
-        animation.setDelayPerUnit(interval);
-        var action = cc.sequence(cc.animate(animation), cc.callFunc(function() {
-            _self.visible = false;
-        }));
-        this.runAction(action);
+        var explosion = Explosion.getOrCreateExplosion();
+        explosion.x = this.x;
+        explosion.y = this.y;
+        this.visible = false;
+
+    },
+
+    /*
+     * 竖直方向下面一格位置的元素
+     */
+    belowBalloon : function() {
+        var row_below = this.rowIndex + 1;
+        return _gameLayer.balloonSpr[row_below][this.colIndex];
     },
 
     setRandomPosition : function() {

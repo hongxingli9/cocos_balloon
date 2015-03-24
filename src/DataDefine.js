@@ -57,3 +57,5 @@ var balloonColorArray = ["red","green","blue","orange","yellow","purple"];
 var TOUCH_BALLOON = "TOUCH_BALLOON"; //自定义事件标示
 var balloonClip = cc.rect(13, 30, 38, 40); //触摸精灵时所在的有效范围
 var effectiveRange = 625; //触摸点与气球坐标有效范围
+var ExplosionArray = [];
+
