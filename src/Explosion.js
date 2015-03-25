@@ -17,7 +17,7 @@ var Explosion = cc.Sprite.extend({
             animation.addSpriteFrame(frame);
         }
         //var animation = new cc.Animation(animFrames, 0.08);
-        animation.setDelayPerUnit(0.07);
+        animation.setDelayPerUnit(0.06);
         this.runAction(cc.sequence(
             cc.animate(animation),
             cc.callFunc(this.destory, this)

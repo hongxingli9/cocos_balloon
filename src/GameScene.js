@@ -3,26 +3,34 @@ var _gameLayer;
 var GameLayer = cc.Layer.extend({
     background : null,
     winSize : null,
+    gameTime : 60,  //游戏时间
+    score : 0,      //得分
     selectedArray : [],  //选中气球的数组
     blastArray : [],    //保存等待爆炸的气球
     balloonSpr : [],    //气球矩阵数组，存储气球精灵
     balloonPos : [],    //气球位置矩阵数组
     ColorArray : [],  //保存滑动轨迹中选择不同的颜色
     bombMark : [],    //保存bomb的坐标和bomb的类型
+    timerAmount : 0,  //加时个数
+    scoreAddAmount : 0,   //加分气球个数
+    longestAmount: 0,     //最长链数
     currentColor : null,  //当前可选择的颜色
     lastOne : null,        //最近经过的气球
     balloonBatchNode : null,
     isFirstTap : true,       //是否第一次触摸
+    canBeTaped : true,      //是否可以触摸
     pauseButton : null,
     clockPanel : null,
     scorePanel : null,
     soundButton : null,
     controlPanel : null,
+    scoreLabel : null,
+    timeLabel : null,
     listener : null,
     isInitial : true,
+    isPause : false,
     balloonFallTime : 0.3,
-    score : 0,
-    time : 60,
+
 
     ctor : function() {
         this._super();
@@ -47,6 +55,7 @@ var GameLayer = cc.Layer.extend({
         this.balloonSpr = this.createArray(MATRIX_ROW_MAX, MATRIX_COL_MAX, null);
         this.initMatrix();
         this.initEventListener();
+        this.schedule(this.updateTimer, 1);
     },
 
     /**
@@ -62,12 +71,12 @@ var GameLayer = cc.Layer.extend({
         this.clockPanel = new cc.MenuItemImage("#clock.png");
         this.clockPanel.x = 30;
         this.clockPanel.y = this.winSize.height - 35;
-        this.addChild(this.clockPanel, 999);
+        this.addChild(this.clockPanel);
 
         this.scorePanel = new cc.MenuItemImage("#score_panel.png");
         this.scorePanel.x = 180;
         this.scorePanel.y = this.winSize.height - 35;
-        this.addChild(this.scorePanel, 999);
+        this.addChild(this.scorePanel);
 
         this.soundButton = new SoundButton();
         this.soundButton.x = this.winSize.width - 25;
@@ -76,6 +85,18 @@ var GameLayer = cc.Layer.extend({
         this.controlPanel = new cc.Menu(this.pauseButton, this.soundButton);
         this.controlPanel.x = this.controlPanel.y = 0;
         this.addChild(this.controlPanel);
+
+        //时间
+        this.timeLabel = new cc.LabelTTF(this.gameTime, 'Arial', 32, cc.size(40, 40), cc.TEXT_ALIGNMENT_CENTER);
+        this.timeLabel.x = this.clockPanel.x + 2;
+        this.timeLabel.y = this.clockPanel.y - 5;
+        this.addChild(this.timeLabel);
+
+        this.scoreLabel = new cc.LabelTTF("0", 'Arial', 40, cc.size(240, 40), cc.TEXT_ALIGNMENT_CENTER);
+        this.scoreLabel.x = this.scorePanel.x;
+        this.scoreLabel.y = this.scorePanel.y;
+        this.addChild(this.scoreLabel);
+
     },
 
     /**
@@ -171,7 +192,7 @@ var GameLayer = cc.Layer.extend({
                 var balloon = null;
                 var coordinate = _gameLayer.getBalloonCoordinate(target, touch);
                 coordinate && (balloon = _gameLayer.balloonSpr[coordinate.x][coordinate.y]);
-                if(balloon && balloon.type == balloonTypes.normal && !balloon.isReady) {
+                if(_gameLayer.canBeTaped && balloon && balloon.type == balloonTypes.normal && !balloon.isReady) {
                     _gameLayer.selectBalloons(balloon);
                     balloon.showInflatedAnimation();
                     balloon.index = 0;
@@ -264,7 +285,6 @@ var GameLayer = cc.Layer.extend({
         if( this.isAdjacent(target, this.lastOne)  && this.isPeaceColor(target, this.currentColor)) {
             return true;
         }
-
         return false;
     },
 
@@ -307,7 +327,6 @@ var GameLayer = cc.Layer.extend({
         } else { //其他类型，不重设currentColor
             return;
         }
-
     },
 
     /*
@@ -364,36 +383,35 @@ var GameLayer = cc.Layer.extend({
             }
         }
 
+        //最长链数
+        if(this.longestAmount < this.blastArray.length) {
+            this.longestAmount = this.blastArray.length;
+        }
+
         //blastArray里的balloon产生爆炸动画
         for(var i = 0,len = this.blastArray.length; i < len; i++) {
+            if(this.blastArray[i].type == balloonTypes.scoreBomb) {
+                this.scoreAddAmount++;
+            } else if(this.blastArray[i].type == balloonTypes.timeBomb) {
+                this.timerAmount++;
+            }
             this.blastArray[i].showExplosionAnimation();
         }
+        this.canBeTaped = false;
+
+        this.updateScore();
     },
 
     /*
      * clear after explosion
      */
     clearAfrerExplosion : function() {
-        for(var i = 0, len = this.blastArray.length, balloons = this.blastArray; i < len; i++) {
-            balloons[i].isReady = false;
-            balloons[i].index = -1;
-        }
-        this.currentColor = null;
-        this.lastOne = null;
-        this.selectedArray = [];
-
         //清除节点
         this.clearBalloons();
-
         //补充
         this.coverBlank();
-        for(var i = 0; i < MATRIX_ROW_MAX; i++) {
-            for(var j = 0; j < MATRIX_COL_MAX; j++) {
-                if(!this.balloonSpr[i][j]) {
-                    this.addOnePattern(i, j);
-                }
-            }
-        }
+        this.scoreAddAmount > 0 && (this.scoreAddAmount = 0);
+        this.timerAmount > 0 && (this.timerAmount = 0);
     },
 
     /*
@@ -405,6 +423,11 @@ var GameLayer = cc.Layer.extend({
             this.balloonSpr[this.blastArray[i].rowIndex][this.blastArray[i].colIndex] = null;
         }
 
+        this.currentColor = null;
+        this.lastOne = null;
+        this.selectedArray = [];
+        this.blastArray = [];
+        this.bombMark = [];
     },
 
     /*
@@ -421,6 +444,8 @@ var GameLayer = cc.Layer.extend({
                        if(this.balloonSpr[index][j]) {
                            this.balloonSpr[index][j].runAction(cc.moveTo(this.balloonFallTime, this.balloonPos[_blank][j]));
                            this.balloonSpr[_blank][j] = this.balloonSpr[index][j];
+                           this.balloonSpr[_blank][j].rowIndex = _blank;
+                           this.balloonSpr[_blank][j].colIndex = j;
                            this.balloonSpr[index][j] = null;
                            _blank += 1;
                            index = _blank + 1;
@@ -431,48 +456,52 @@ var GameLayer = cc.Layer.extend({
                 }
             }
         }
+
+        for(var i = 0; i < MATRIX_ROW_MAX; i++) {
+            for(var j = 0; j < MATRIX_COL_MAX; j++) {
+                if(!this.balloonSpr[i][j]) {
+                    this.addOnePattern(i, j);
+                }
+            }
+        }
+        this.runAction(cc.sequence(cc.delayTime(0.3), cc.callFunc(function() {_gameLayer.canBeTaped = true;}, this)));
     },
 
-    /**
-     * 创建时间和分数的数字精灵
+    /*
+     * 更新时间
      */
-    buildNumber : function() {
-
-    },
-
-    /**
-     * 清除掉爆炸后的气球
-     */
-    clearSomePatterns : function() {
-
-    },
-
-    /**
-     * 清除后的处理操作
-     */
-    onClearFinish : function() {
-
+    updateTimer : function() {
+        this.gameTime -= 1;
+        if(this.gameTime < 0) {
+            //结束
+            this.unschedule(this.updateTimer);
+        } else {
+            if(this.timerAmount > 0) {
+                this.gameTime += this.timerAmount * 5;
+            }
+            this.timeLabel.string = this.gameTime;
+        }
     },
 
     /**
      * 暂停游戏
      */
     pauseGame : function() {
-
-    },
-
-    /**
-     * 更新时间
-     */
-    updateTime : function() {
-
+        if(!this.isPause) {
+            this.isPause = true;
+            cc.director.pause();
+        } else {
+            this.isPause = false;
+            cc.director.resume();
+        }
     },
 
     /**
      * 更新分数
      */
     updateScore : function() {
-
+        this.score += this.scoreAddAmount > 0 ? scoreBase * this.blastArray.length * this.scoreAddAmount : scoreBase * this.blastArray.length;
+        this.scoreLabel.string = this.score;
     }
 });
 
