@@ -5,7 +5,6 @@ var Cloud = cc.Sprite.extend({
     //free_move : true,    //true为自由模式，做来回运动； false为垂直运动
     winWidth : null,
     winHeight : null,
-    initialSpeed : 0,
 
     ctor : function() {
         this.winWidth = cc.winSize.width;
@@ -15,7 +14,9 @@ var Cloud = cc.Sprite.extend({
         this.anchorY = 0;
         this.x = this.winWidth / 2;
         this.y = 0;
-
+        this.initialSpeed = 0;
+        this.flySpeed = 400;
+        this.moving = false;
     },
 
     init : function(isFreeMove) {
@@ -23,7 +24,7 @@ var Cloud = cc.Sprite.extend({
         if(isFreeMove) {
             this.scheduleUpdate();
         } else {
-            this.initialSpeed = 20;
+            this.initialSpeed = 80;
             this.schedule(this.initialFloat, gameData.flame_rate);
         }
     },
@@ -47,15 +48,48 @@ var Cloud = cc.Sprite.extend({
      * 初始漂浮运动
      */
     initialFloat : function(dt) {
+        this.moving = true;
         this.y -= this.initialSpeed * dt;
-        this.initialSpeed -= 3 * dt;
+        this.initialSpeed -= 8 * dt;
         if(this.y <= -this.winHeight) {
             this.y = 0;
             this.unschedule(this.initialFloat);
+            this.moving = false;
             return;
         }
         if(this.initialSpeed <= 0) {
             this.initialSpeed = 0;
+            this.unschedule(this.initialFloat);
+            this.moving = false;
+            return;
+        }
+    },
+
+    playFlyEffect : function() {
+        if(this.moving) {
+            this.unschedule(this.initialFloat);
+        }
+        if(this.flying) {
+            this.unschedule(this.flyMove);
+        }
+        this.schedule(this.flyMove, gameData.flame_rate);
+    },
+
+    flyMove : function(dt) {
+        this.flying = true;
+        this.y -= this.flySpeed * dt;
+        this.flySpeed -= 8 * dt;
+        if(this.y <= -this.winHeight) {
+            this.y = 0;
+            this.unschedule(this.flyMove);
+            this.flying = false;
+            this.flySpeed = 400;
+            return;
+        }
+        if(this.flySpeed <= 0) {
+            this.flySpeed = 400;
+            this.unschedule(this.flyMove);
+            this.flying = false;
             return;
         }
     }

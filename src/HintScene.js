@@ -1,5 +1,4 @@
 var HintLayer = cc.Layer.extend({
-    hintPanels : [],
     winWidth : null,
     winHeight : null,
     currentIndex : 0,
@@ -19,11 +18,9 @@ var HintLayer = cc.Layer.extend({
         this.background = new Cloud();
         this.background.init(true);
         this.addChild(this.background);
-
         var soundButton = new SoundButton();
         soundButton.x = this.winWidth - 25;
         soundButton.y = this.winHeight - 30;
-
         this.play_button = new cc.MenuItemImage("#playBut.png");
         this.play_button.x = -this.winWidth;
         this.play_button.y = this.winHeight / 2 - 200;
@@ -35,9 +32,9 @@ var HintLayer = cc.Layer.extend({
         this.addChild(gameData.menu, 999);
         gameData.menu.x = gameData.menu.y = 0;
 
-        this.panelsBatchNode = cc.SpriteBatchNode.create(res.panels_png, gameData.hint_panels_length);
-        this.addChild(this.panelsBatchNode,1);
-
+        this.panelsBatchNode = cc.SpriteBatchNode.create(res.textures_png, gameData.hint_panels_length);
+        this.addChild(this.panelsBatchNode,900);
+        this.hintPanels = [];
         this.initHintPanels();
         this.showPanel(0);
         this.scheduleUpdate();
@@ -63,13 +60,13 @@ var HintLayer = cc.Layer.extend({
                     }
                     return true;
                 }
-            }
-        );
+        });
 
         cc.eventManager.addListener(touchListener, this);
     },
 
     runGame : function() {
+        sound.playTapMenuSound();
         cc.director.runScene(new GameScene());
     },
 
@@ -87,6 +84,8 @@ var HintLayer = cc.Layer.extend({
             panel.index = index;
             panel.x = this.winWidth + 400;
             panel.y = this.winHeight / 2;
+            panel.visible = false;
+            panel.visible = true;
             this.hintPanels.push(panel);
             this.panelsBatchNode.addChild(panel);
         }
@@ -139,7 +138,7 @@ var HintLayer = cc.Layer.extend({
 });
 
 var HintScene = cc.Scene.extend({
-   onEnter : function() {
+   ctor : function() {
        this._super();
        var layer = new HintLayer();
        this.addChild(layer);

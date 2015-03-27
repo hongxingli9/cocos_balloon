@@ -39,7 +39,7 @@ Explosion.sharedExplosion = function() {
         animation.addSpriteFrame(frame);
     }
     //var animation = new cc.Animation(animFrames, 0.08);
-    animation.setDelayPerUnit(0,08);
+    animation.setDelayPerUnit(0.08);
     cc.animationCache.addAnimation(animation, "Explosion");
 };
 

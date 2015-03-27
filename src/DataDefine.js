@@ -54,9 +54,76 @@ var balloonTypes = {
     "scoreBomb" : 6
 };
 var balloonColorArray = ["red","green","blue","orange","yellow","purple"];
-var TOUCH_BALLOON = "TOUCH_BALLOON"; //自定义事件标示
-var balloonClip = cc.rect(13, 30, 38, 40); //触摸精灵时所在的有效范围
 var effectiveRange = 625; //触摸点与气球坐标有效范围
 var ExplosionArray = [];
 var scoreBase = 130;  //加分基数
+var gameResult = {
+    score : "0",
+    amount : "0",
+    longestChain : "0",
+    highestScore : "0"
+};
 
+var isMute = false;
+var sound = {
+    toggleMusic : function() {
+        if(!isMute) {
+            cc.audioEngine.pauseMusic();
+            cc.audioEngine.playEffect(res.sound_on);
+            isMute = true;
+        } else {
+            cc.audioEngine.resumeMusic();
+            cc.audioEngine.playEffect(res.sound);
+            isMute = false;
+        }
+    },
+
+    resumeMusic : function() {
+        if(isMute) {
+            return;
+        }
+        cc.audioEngine.resumeMusic();
+    },
+
+    pauseMusic : function() {
+        if(isMute) {
+            return;
+        }
+        cc.audioEngine.pauseMusic();
+    },
+
+    playTapSound : function() {
+        !isMute && cc.audioEngine.playEffect(res.sound) ;
+    },
+
+    playTapMenuSound : function() {
+        !isMute && cc.audioEngine.playEffect(res.sound_on);
+    },
+
+    playExplosionSound : function(blast_len) {
+        if(isMute) {
+            return;
+        }
+        if(3 <= blast_len && 5 >= blast_len) {
+            cc.audioEngine.playEffect(res.sound_low);
+        } else if(6 <= blast_len && 9 >= blast_len) {
+            cc.audioEngine.playEffect(res.sound_middle);
+        } else if(10 < blast_len) {
+            cc.audioEngine.playEffect(res.sound_loud);
+        }
+    },
+
+    playBombSound : function() {
+        if(isMute) {
+            return;
+        }
+        cc.audioEngine.playEffect(res.sound_bomb);
+    },
+
+    playResultSound : function() {
+        if(isMute) {
+            return;
+        }
+        cc.audioEngine.playEffect(res.sound_result);
+    }
+}

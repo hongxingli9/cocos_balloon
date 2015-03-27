@@ -11,12 +11,11 @@ var WelcomeLayer = cc.Layer.extend({
         this.background = new Cloud();
         this.background.init(true);
         this.addChild(this.background);
-
         var soundButton = new SoundButton();
         soundButton.x = size.width - 25;
         soundButton.y = size.height - 30;
 
-        this.floatBalloonBatchNode = cc.SpriteBatchNode.create(res.balloons_png, gameData.floatBalloons.length);
+        this.floatBalloonBatchNode = cc.SpriteBatchNode.create(res.textures_png, gameData.floatBalloons.length);
         this.addChild(this.floatBalloonBatchNode);
 
         this.game_name = cc.Sprite.createWithSpriteFrameName("#panel_06.png");
@@ -52,17 +51,16 @@ var WelcomeLayer = cc.Layer.extend({
     },
 
     showHintScene : function() {
-        //cc.director.pause();
+        sound.playTapMenuSound();
         cc.director.runScene(new HintScene());
     }
 });
 
 var WelcomeScene = cc.Scene.extend({
-    onEnter:function () {
+    ctor : function () {
         this._super();
-        cc.spriteFrameCache.addSpriteFrames(res.panels_plist);
-        cc.spriteFrameCache.addSpriteFrames(res.balloons_plist);
         cc.spriteFrameCache.addSpriteFrames(res.widget_plist);
+        cc.spriteFrameCache.addSpriteFrames(res.textures_plist);
         var layer = new WelcomeLayer();
         this.addChild(layer);
     }

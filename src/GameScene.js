@@ -5,15 +5,16 @@ var GameLayer = cc.Layer.extend({
     winSize : null,
     gameTime : 60,  //游戏时间
     score : 0,      //得分
-    selectedArray : [],  //选中气球的数组
-    blastArray : [],    //保存等待爆炸的气球
-    balloonSpr : [],    //气球矩阵数组，存储气球精灵
-    balloonPos : [],    //气球位置矩阵数组
-    ColorArray : [],  //保存滑动轨迹中选择不同的颜色
-    bombMark : [],    //保存bomb的坐标和bomb的类型
+    //selectedArray : [],  //选中气球的数组
+   // blastArray : [],    //保存等待爆炸的气球
+   // balloonSpr : [],    //气球矩阵数组，存储气球精灵
+   // balloonPos : [],    //气球位置矩阵数组
+   // bombMark : [],    //保存bomb的坐标和bomb的类型
     timerAmount : 0,  //加时个数
     scoreAddAmount : 0,   //加分气球个数
     longestAmount: 0,     //最长链数
+    highestScore : null,  //最高分数
+    totalBalloons : 0,     //爆破气球数
     currentColor : null,  //当前可选择的颜色
     lastOne : null,        //最近经过的气球
     balloonBatchNode : null,
@@ -44,11 +45,11 @@ var GameLayer = cc.Layer.extend({
         this.background = new Cloud();
         this.background.init(false);
         this.addChild(this.background);
-        this.balloonBatchNode = cc.SpriteBatchNode.create(res.balloons_png, MATRIX_COL_MAX * MATRIX_ROW_MAX);
-        this.explosionBatchNode = cc.SpriteBatchNode.create(res.texture_png);
+        this.balloonBatchNode = cc.SpriteBatchNode.create(res.textures_png, MATRIX_COL_MAX * MATRIX_ROW_MAX);
+        this.explosionBatchNode = cc.SpriteBatchNode.create(res.textures_png);
         this.addChild(this.balloonBatchNode);
         this.addChild(this.explosionBatchNode);
-        Explosion.preSet();
+       // Explosion.preSet();
        // Explosion.sharedExplosion();
         this.initWidgetUI();
         this.balloonPos = this.createArray(MATRIX_ROW_MAX, MATRIX_COL_MAX, null);
@@ -56,6 +57,10 @@ var GameLayer = cc.Layer.extend({
         this.initMatrix();
         this.initEventListener();
         this.schedule(this.updateTimer, 1);
+        //重置一下
+        this.selectedArray = [];
+        this.blastArray = [];
+        this.bombMark = [];
     },
 
     /**
@@ -77,14 +82,23 @@ var GameLayer = cc.Layer.extend({
         this.scorePanel.x = 180;
         this.scorePanel.y = this.winSize.height - 35;
         this.addChild(this.scorePanel);
-
         this.soundButton = new SoundButton();
         this.soundButton.x = this.winSize.width - 25;
         this.soundButton.y = this.winSize.height - 30;
 
-        this.controlPanel = new cc.Menu(this.pauseButton, this.soundButton);
+        this.PlayButton = new cc.MenuItemImage("#playBut.png");
+        this.PlayButton.x = this.winSize.width / 2 + 70;
+        this.PlayButton.y = this.winSize.height / 2 - 200;
+        this.PlayButton.setCallback(this.showHintScene, this);
+
+        this.QuitButton = new cc.MenuItemImage("#quitBut.png");
+        this.QuitButton.x = this.winSize.width / 2 - 70;
+        this.QuitButton.y = this.winSize.height / 2 - 200;
+        this.QuitButton.setCallback(this.showWelcomeScene, this);
+
+        this.controlPanel = new cc.Menu(this.pauseButton, this.soundButton, this.PlayButton, this.QuitButton);
         this.controlPanel.x = this.controlPanel.y = 0;
-        this.addChild(this.controlPanel);
+        this.addChild(this.controlPanel, 1000);
 
         //时间
         this.timeLabel = new cc.LabelTTF(this.gameTime, 'Arial', 32, cc.size(40, 40), cc.TEXT_ALIGNMENT_CENTER);
@@ -96,6 +110,15 @@ var GameLayer = cc.Layer.extend({
         this.scoreLabel.x = this.scorePanel.x;
         this.scoreLabel.y = this.scorePanel.y;
         this.addChild(this.scoreLabel);
+
+        this.pausePanel = new cc.Sprite("#panel_07.png");
+        this.pausePanel.x = this.winSize.width / 2;
+        this.pausePanel.y = this.winSize.height / 2;
+        this.addChild(this.pausePanel, 999);
+
+        this.PlayButton.visible = false;
+        this.QuitButton.visible = false;
+        this.pausePanel.visible = false;
 
     },
 
@@ -184,16 +207,17 @@ var GameLayer = cc.Layer.extend({
      * 初始化事件监听
      */
     initEventListener : function() {
+        var self = this;
         this.listener = cc.EventListener.create({
             event : cc.EventListener.TOUCH_ONE_BY_ONE,
             swallowTouches : true,
             onTouchBegan: function(touch, event) {
                 var target = event.getCurrentTarget();
                 var balloon = null;
-                var coordinate = _gameLayer.getBalloonCoordinate(target, touch);
-                coordinate && (balloon = _gameLayer.balloonSpr[coordinate.x][coordinate.y]);
-                if(_gameLayer.canBeTaped && balloon && balloon.type == balloonTypes.normal && !balloon.isReady) {
-                    _gameLayer.selectBalloons(balloon);
+                var coordinate = self.getBalloonCoordinate(target, touch);
+                coordinate && (balloon = self.balloonSpr[coordinate.x][coordinate.y]);
+                if(self.canBeTaped && balloon && balloon.type == balloonTypes.normal && !balloon.isReady) {
+                    self.selectBalloons(balloon);
                     balloon.showInflatedAnimation();
                     balloon.index = 0;
                      return true;
@@ -206,25 +230,25 @@ var GameLayer = cc.Layer.extend({
                 var isMoving = false;
                 var target = event.getCurrentTarget();
                 var balloon = null;
-                var coordinate = _gameLayer.getBalloonCoordinate(target, touch);
-                coordinate && (balloon = _gameLayer.balloonSpr[coordinate.x][coordinate.y]);
+                var coordinate = self.getBalloonCoordinate(target, touch);
+                coordinate && (balloon = self.balloonSpr[coordinate.x][coordinate.y]);
                 balloon && (isMoving = true);
-                if(isMoving && _gameLayer.isCoincided(balloon)) {
-                     _gameLayer.selectBalloons(balloon);
+                if(isMoving && self.isCoincided(balloon)) {
+                     self.selectBalloons(balloon);
                      balloon.showInflatedAnimation();
-                     balloon.index = _gameLayer.selectedArray.length - 1; //这步忽略了已selectBalloons，length已经+1，所以这里要-1；
+                     balloon.index = self.selectedArray.length - 1; //这步忽略了已selectBalloons，length已经+1，所以这里要-1；
                      return true;
                 }
                 return false;
             },
 
             onTouchEnded : function() {
-                if(_gameLayer.selectedArray.length < 3) {
-                    _gameLayer.abandonAndRecover();
+                if(self.selectedArray.length < 3) {
+                    self.abandonAndRecover();
                 } else {
                     //做爆炸处理
-                    _gameLayer.explodeBalloons();
-                    _gameLayer.runAction(cc.sequence(cc.delayTime(0.8), cc.callFunc(_gameLayer.clearAfrerExplosion, _gameLayer)));
+                    self.explodeBalloons();
+                    self.runAction(cc.sequence(cc.delayTime(0.6), cc.callFunc(self.clearAfrerExplosion, self)));
                 }
             }
         });
@@ -316,6 +340,7 @@ var GameLayer = cc.Layer.extend({
      * 添加气球进selectedArray
      */
     selectBalloons : function(balloon) {
+        sound.playTapSound();
         balloon.isReady = true;
         this.selectedArray.push(balloon);
         this.lastOne = balloon;
@@ -384,9 +409,10 @@ var GameLayer = cc.Layer.extend({
         }
 
         //最长链数
-        if(this.longestAmount < this.blastArray.length) {
-            this.longestAmount = this.blastArray.length;
+        if(this.longestAmount < this.selectedArray.length) {
+            this.longestAmount = this.selectedArray.length;
         }
+        this.totalBalloons  += this.blastArray.length;
 
         //blastArray里的balloon产生爆炸动画
         for(var i = 0,len = this.blastArray.length; i < len; i++) {
@@ -397,9 +423,20 @@ var GameLayer = cc.Layer.extend({
             }
             this.blastArray[i].showExplosionAnimation();
         }
+
+        this.background.playFlyEffect();
+
+        if(0 == this.bombMark.length) {
+            sound.playExplosionSound(this.blastArray.length);
+        } else {
+            sound.playBombSound();
+        }
         this.canBeTaped = false;
 
         this.updateScore();
+        gameResult.score = this.score;
+        gameResult.longestChain = this.longestAmount;
+        gameResult.amount = this.totalBalloons;
     },
 
     /*
@@ -435,6 +472,7 @@ var GameLayer = cc.Layer.extend({
      */
     coverBlank : function() {
         var index;
+        var self = this;
         for(var i = 0; i < MATRIX_ROW_MAX; i++) {
             for(var j = 0; j < MATRIX_COL_MAX; j++) {
                 if(!this.balloonSpr[i][j] && i != MATRIX_ROW_MAX) {
@@ -464,7 +502,7 @@ var GameLayer = cc.Layer.extend({
                 }
             }
         }
-        this.runAction(cc.sequence(cc.delayTime(0.3), cc.callFunc(function() {_gameLayer.canBeTaped = true;}, this)));
+        this.runAction(cc.sequence(cc.delayTime(0.3), cc.callFunc(function() {self.canBeTaped = true;}, this)));
     },
 
     /*
@@ -475,6 +513,15 @@ var GameLayer = cc.Layer.extend({
         if(this.gameTime < 0) {
             //结束
             this.unschedule(this.updateTimer);
+            //this.clearBalloons();
+            //this.coverBlank();
+            if(window.localStorage.highestScore) {
+                window.localStorage.highestScore = window.localStorage.highestScore > this.score ? window.localStorage.highestScore : this.score;
+            } else {
+                window.localStorage.highestScore = this.score;
+            }
+            gameResult.highestScore = window.localStorage.highestScore;
+            cc.director.runScene(new GameResultScene());
         } else {
             if(this.timerAmount > 0) {
                 this.gameTime += this.timerAmount * 5;
@@ -489,10 +536,18 @@ var GameLayer = cc.Layer.extend({
     pauseGame : function() {
         if(!this.isPause) {
             this.isPause = true;
+            this.PlayButton.visible = true;
+            this.QuitButton.visible = true;
+            this.pausePanel.visible = true;
             cc.director.pause();
+            sound.pauseMusic();
         } else {
             this.isPause = false;
+            this.PlayButton.visible = false;
+            this.QuitButton.visible = false;
+            this.pausePanel.visible = false;
             cc.director.resume();
+            sound.resumeMusic();
         }
     },
 
@@ -502,18 +557,40 @@ var GameLayer = cc.Layer.extend({
     updateScore : function() {
         this.score += this.scoreAddAmount > 0 ? scoreBase * this.blastArray.length * this.scoreAddAmount : scoreBase * this.blastArray.length;
         this.scoreLabel.string = this.score;
+    },
+
+    showHintScene : function() {
+        cc.director.resume();
+        sound.resumeMusic();
+        ExplosionArray = [];
+        var hintLayer = new HintLayer();
+        var scene = new cc.Scene();
+        scene.addChild(hintLayer);
+        sound.playTapMenuSound();
+        cc.director.runScene(scene);
+    },
+
+    showWelcomeScene : function() {
+        cc.director.resume();
+        sound.resumeMusic();
+        ExplosionArray = [];
+        var welcomeLayer = new WelcomeLayer();
+        var scene = new  cc.Scene();
+        scene.addChild(welcomeLayer);
+        sound.playTapMenuSound();
+        cc.director.runScene(scene);
+    },
+
+    addExplosions : function(explosion) {
+        this.explosionBatchNode.addChild(explosion);
     }
 });
 
 var GameScene = cc.Scene.extend({
-       onEnter : function() {
+       ctor : function() {
            this._super();
            var layer = new GameLayer();
            this.addChild(layer);
        }
-
 });
 
-GameLayer.prototype.addExplosions = function(explosion) {
-    this.explosionBatchNode.addChild(explosion);
-}

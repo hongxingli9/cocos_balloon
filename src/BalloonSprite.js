@@ -83,14 +83,6 @@ var BalloonSprite = cc.Sprite.extend({
 
     },
 
-    /*
-     * 竖直方向下面一格位置的元素
-     */
-    belowBalloon : function() {
-        var row_below = this.rowIndex + 1;
-        return _gameLayer.balloonSpr[row_below][this.colIndex];
-    },
-
     setRandomPosition : function() {
         this.x = Math.floor(Math.random() * this.winWidth);
         this.y = Math.floor(Math.random() * this.winHeight);

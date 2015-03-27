@@ -1,16 +1,17 @@
 var res = {
     background_jpg : "res/images/background.jpg",
     music_ogg : "res/audio/music.ogg",
-    sound_on_ogg : "res/audio/SoundOn.ogg",
-    sound_off_ogg : "res/audio/SoundOff.ogg",
-    panels_plist : "res/images/panels.plist",
-    panels_png : "res/images/panels.png",
-    balloons_png : "res/images/balloons.png",
-    balloons_plist : "res/images/balloons.plist",
+    sound_on : "res/audio/SoundOn.ogg",
+    sound : "res/audio/SoundOff.ogg",
+    sound_low : "res/audio/3_5.ogg",
+    sound_middle : "res/audio/6_9.ogg",
+    sound_loud : "res/audio/10.ogg",
+    sound_bomb : "res/audio/bomb.ogg",
+    sound_result : "res/audio/result.ogg",
     widget_plist : "res/images/widget.plist",
     widget_png : "res/images/widget.png",
-    texture_plist : "res/images/texture.plist",
-    texture_png : "res/images/texture.png"
+    textures_plist : "res/images/textures.plist",
+    textures_png : "res/images/textures.png"
 };
 
 var g_resources = [];
