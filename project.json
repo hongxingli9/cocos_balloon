@@ -1,0 +1,26 @@
+{
+    "project_type": "javascript",
+
+    "debugMode" : 1,
+    "showFPS" : true,
+    "frameRate" : 60,
+    "id" : "gameCanvas",
+    "renderMode" : 2,
+    "engineDir":"../frameworks/cocos2d-html5",
+
+    "modules" : ["cocos2d"],
+
+
+    "jsList" : [
+        "src/resource.js",
+        "src/DataDefine.js",
+        "src/SoundButton.js",
+        "src/WelcomeScene.js",
+        "src/Cloud.js",
+        "src/Explosion.js",
+        "src/BalloonSprite.js",
+        "src/HintScene.js",
+        "src/GameScene.js",
+        "src/GameResult.js"
+    ]
+}
